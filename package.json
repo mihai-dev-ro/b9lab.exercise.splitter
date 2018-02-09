@@ -1,0 +1,26 @@
+{
+  "name": "project1.splitter",
+  "version": "1.0.0",
+  "description": "\"Smart contract that implements splitter functionality\"",
+  "main": "truffle.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mihai-dev-ro/b9lab.exercise.splitter.git"
+  },
+  "author": "mihai.nicola@blink-it.ro",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mihai-dev-ro/b9lab.exercise.splitter/issues"
+  },
+  "homepage": "https://github.com/mihai-dev-ro/b9lab.exercise.splitter#readme",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "truffle-default-builder": "^2.0.0"
+  }
+}

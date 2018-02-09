@@ -1,0 +1,5 @@
+#truffle build folder
+build
+
+# npm packages
+node_modules
