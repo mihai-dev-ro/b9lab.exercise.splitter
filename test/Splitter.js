@@ -81,19 +81,3 @@ contract("Splitter", accounts => {
 		})
 	});	
 });
-
-
-
-
-
-// contract('Splitter', function(accounts) {
-// 	it("it should split 100 Wi in", function() {
-// 		return Splitter.deployed().then(function(instance) {
-// 			return instance.getBalance.call();
-// 		}).then(function(balance) {
-// 			assert.equal(balance.valueOf(), )
-// 		});
-// 	});
-
-// });
-
