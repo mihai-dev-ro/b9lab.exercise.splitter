@@ -1,83 +1,173 @@
-var Splitter = artifacts.require("./Splitter.sol");
+var Splitter = artifacts.require("Splitter");
 var Promise = require("bluebird");
 Promise.promisifyAll(web3.eth, {suffix: "Promise"});
+var expectedExceptionPromise = require("./expected_exception_testRPC_and_geth.js");
 
 contract("Splitter", accounts => {
-	let instance;
-	let amountEvenToSplit = 100;
-	let aliceAddress, bobAddress, carolAddress;
-	let balanceOfBobBeforeSplit = 0, balanceOfCarolBeforeSplit = 0;
 
-	describe("validate transaction sent to the contract", () => {
-		it("should accept split requests only from the Benefactor(Alice)", () => {
-			
-			return Splitter.deployed()
-				.then(_instance => {
-					instance = _instance;
-					return _instance.benefactorAlice.call();
-				}).then(benefactor => {
-					let i = 0;
-					while(accounts[i] == benefactor) {
-						i++;
-					}
-					return instance.sendTransaction({from: accounts[i], value: amountEvenToSplit})
-				}).catch(error => {
-					assert.include(error.message, "revert", "Splitter should accept transactuions only from Alice");
-				}); 
-		});	
-	});
+    describe("validate split transaction sent to the contract", () => {
+        it("should accept split requests only from the Benefactor(Alice)", () => {
+            let instance;
 
-	describe("validate split accuracy and finalization", () => {
-		beforeEach("get all stakeholders' addresses & beneficiaries' balances", () => {
-			return Splitter.deployed().then(_instance => {
-					instance = _instance;
+            return Splitter.new(accounts[0], accounts[1], accounts[2], 
+                    {from: accounts[0]})
+                .then(_instance => {
+                    instance = _instance;
 
-					return instance.beneficiaryBob.call();
-				}).then(address => {
-					bobAddress = address;
-					return web3.eth.getBalancePromise(address);
-				}).then(balance => {
-					balanceOfBobBeforeSplit = balance;
-					
-					return instance.beneficiaryCarol.call();
-				}).then(address => {
-					carolAddress = address;
-					return web3.eth.getBalancePromise(address);
-				}).then(balance=> {
-					balanceOfCarolBeforeSplit = balance;
+                    return instance.performSplit({from: accounts[0], value: 100}); 
+                }).then(txObj => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "The transaction has been completed successfully from benefactor(Alice)");
 
-					return instance.benefactorAlice.call();
-				}).then(benefactor => {
-					aliceAddress = benefactor;
-				}); 
-		});
+                    return expectedExceptionPromise(() => {
+                        return instance.performSplit({from: accounts[3], value: 100, 
+                            gas: 1000000})}, 1000000);
+                }); 
+        }); 
 
-		it("should split an even number 100Wei from Alice to Bob and Carol", () => {
-			return Promise.resolve().then(() => {
-					return instance.sendTransaction({from: aliceAddress, value: amountEvenToSplit});
-				}).then(txObj => {
-					assert.equal(txObj.receipt.status, 1, "Alice has successfully send transaction to contract");
-					
-					return web3.eth.getBalancePromise(bobAddress);
-				}).then(balanceOfBobAfterSplit => {		
-					assert.equal(balanceOfBobAfterSplit.minus(balanceOfBobBeforeSplit).toNumber(), amountEvenToSplit/2, "Bob has an extra amount of 50Wei in his account" );
+        it("should split the amount from Benefactor(Alice) into each beneficiary account", () => {
+            let instance;
+            let amountToSplit = 100;
+            let addressAlice = accounts[0];
+            let addressBob = accounts[1];
+            let addressCarol = accounts[2];
 
-					return web3.eth.getBalancePromise(carolAddress);
-				}).then(balanceOfCarolAfterSplit => {
-					assert.equal(balanceOfCarolAfterSplit.minus(balanceOfCarolBeforeSplit).toNumber(), amountEvenToSplit/2, "Carol has an extra amount of 50Wei in his account" );
-				});
-		});
+            return Splitter.new(addressAlice, addressBob, addressCarol, 
+                    {from: accounts[0]})
+                .then(_instance => {
+                    instance = _instance;
 
-		it("the should keep the remainder of an odd split amount", () => {
-			return Promise.resolve().then(() => {
-					return instance.sendTransaction({from: aliceAddress, value: amountEvenToSplit + 1});
-				}).then(txObj => {
-					assert.equal(txObj.receipt.status, 1, "Alice has successfully send transaction to contract");
-					
-					return instance.getBalance.call();
-				}).then(contractBalance => {		
-					assert.isAbove(contractBalance.toNumber(), 0, "Splitting into half an odd number result in a reminder that stays within the contract" );
-				});
-		})
-	});	
+                    return instance.performSplit(
+                            {from: addressAlice, value: amountToSplit});
+                }).then(txObj => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "The transaction has been completed successfully");
+
+                    return instance.getAccountBalance.call({from: addressBob});
+                }).then(balance => {
+                    assert.equal(balance.toString(10), (amountToSplit/2).toString(10), 
+                        "Bob's balance holds the half of the split amount ");
+
+                    return instance.getAccountBalance.call({from: addressCarol});
+                }).then(balance => {
+                    assert.equal(balance.toString(10), (amountToSplit/2).toString(10), 
+                        "Carol's balance holds the half of the split amount ");                    
+                });
+
+        });
+    });
+
+    describe("validate split accuracy and withdrawal", () => {
+        it("should split an even number 100Wei from Alice and Bob can withdraw his share", () => {
+            let instance;
+            let amountToSplit = 100;
+            let addressAlice = accounts[0];
+            let addressBob = accounts[1];
+            let addressCarol = accounts[2];
+            let balanceOfBobBeforeSplit = 0; 
+            
+            return Splitter.new(addressAlice, addressBob, addressCarol, 
+                    {from: accounts[0]})
+                .then(_instance => {
+                    instance = _instance;
+
+                    return instance.performSplit(
+                        {from: addressAlice, value: amountToSplit});
+                }).then(() => {
+                    return web3.eth.getBalancePromise(addressBob);
+                }).then(balance => {
+                    balanceOfBobBeforeSplit = balance;
+
+                    return instance.withdrawFunds({from: addressBob});
+                }).then(txObj => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "Bob has succesffully withdrawn the splitted amount");
+
+                    return web3.eth.getBalancePromise(addressBob);
+                }).then(balance => {
+                    assert(balance.minus(balanceOfBobBeforeSplit).toString(10),
+                        (amountToSplit / 2).toString(10),
+                        "Split funds have been succesffully transferred to Bob")
+
+                });
+        });
+
+        it("should split an even number 100Wei from Alice and Carol can withdraw her share", () => {
+            let instance;
+            let amountToSplit = 100;
+            let addressAlice = accounts[0];
+            let addressBob = accounts[1];
+            let addressCarol = accounts[2];
+            let balanceOfCarolBeforeSplit = 0;
+
+            return Splitter.new(addressAlice, addressBob, addressCarol, 
+                    {from: accounts[0]})
+                .then(_instance => {
+                    instance = _instance;
+
+                    return instance.performSplit(
+                        {from: addressAlice, value: amountToSplit});
+                }).then(() => {
+                    return web3.eth.getBalancePromise(addressCarol);
+                }).then(balance => {
+                    balanceOfCarolBeforeSplit = balance;
+
+                    return instance.withdrawFunds({from: addressCarol});
+                }).then(txObj => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "Carol has succesffully withdrawn the splitted amount");
+
+                    return web3.eth.getBalancePromise(addressCarol);
+                }).then(balance => {
+                    assert(balance.minus(balanceOfCarolBeforeSplit).toString(10),
+                        (amountToSplit / 2).toString(10),
+                        "Split funds have been succesffully transferred to Carol")
+
+                });
+        });
+
+
+        it("the should keep track of odd amounts' split remainders and process them as well", () => {
+            
+            let instance;
+            let firstAmountOddToSplit = new web3.BigNumber(101);
+            let secondAmountOddToSplit = new web3.BigNumber(107);
+
+            let addressAlice = accounts[0];
+            let addressBob = accounts[1];
+            let addressCarol = accounts[2];
+            let balanceOfBobBeforeSplit = 0; 
+
+            
+            return Splitter.new(addressAlice, addressBob, addressCarol,
+                    {from: accounts[0]})
+                .then(_instance => {
+                    instance = _instance;
+
+                    return instance.performSplit(
+                        {from: addressAlice, value: firstAmountOddToSplit}); 
+                }).then((txObj) => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "Alice has successfully splitted " +
+                        firstAmountOddToSplit.toString(10) + "Wei");
+
+                    return instance.getAccountBalance({from: addressBob});
+                }).then(balance => {
+                    assert.equal(balance.toString(10), 
+                        Math.floor(firstAmountOddToSplit / 2).toString(10),
+                        "Bog's balance is equal to " + 
+                        Math.floor(firstAmountOddToSplit / 2).toString(10));
+
+                    return instance.performSplit(
+                        {from: addressAlice, value: secondAmountOddToSplit}); 
+                }).then((txObj) => {
+                    assert.strictEqual(parseInt(txObj.receipt.status), 1, "Alice has successfully splitted " +
+                        secondAmountOddToSplit.toString(10) + "Wei");
+
+                    return instance.getAccountBalance({from: addressBob});
+                }).then(balance => {
+                    assert.equal(balance.toString(10),
+                        firstAmountOddToSplit.plus(secondAmountOddToSplit).dividedBy(2).toString(10),
+                        "Bob's balance is equal to (" +
+                        firstAmountOddToSplit.toString(10) + " + " + 
+                        secondAmountOddToSplit.toString(10) + ")/2");
+                });
+
+        })
+    }); 
 });
