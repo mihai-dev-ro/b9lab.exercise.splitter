@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>    
+    <head>
+        <meta charset="utf-8">
+        <title>B9Lab Acaddemy - Exercises - Splitter</title>
+        <link rel="stylesheet" type="text/css" href="app.css">
+    </head>
+    <body>
+        <div class="alert alert-info show hide" id="pageNotifications" role="alert"></div>
+        <div class="container mt-5">
+            <div class="jumbotron">
+                <h1 class="display-4">B9Lab Exercise1 - Splitter</h1>
+                <p class="lead">Smart Contract where:</p>
+                <ul>
+                    <li>there are 3 people: Alice, Bob and Carol</li>
+                    <li>we can see the balance of the Splitter contract</li>
+                    <li>whenever Alice sends ether to the contract, half of it goes to Bob and the other half to Carol</li>
+                    <li>we can see the balances of Alice, Bob and Carol</li>
+                    <li>Alice can use this page to split her ether</li>
+                </ul>
+            </div>
+            <div class="container">
+                <form>
+                    <div class="form-group">
+                        <label for="smartContractBalance">Smart Contract's balance</label>
+                        <input id="smartContractBalance" type="text" class="form-control" readonly>
+                    </div>
+                    <hr class="mt-1 mb-5">
+                    <div class="form-group">
+                        <label for="aliceBalance">Alice account's balance</label>
+                        <input id="aliceBalance" type="text" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="bobBalance">Bob account's balance</label>
+                        <input id="bobBalance" type="text" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="carolBalance">Carol account's balance</label>
+                        <input id="carolBalance" type="text" class="form-control" readonly>
+                    </div>
+                    <div>
+                        <p class="lead">If Alice, you can request a new split here:</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" name="aliceNewSplitRequest" id="aliceNewSplitRequest" placeholder="amount in ether" aria-label="amount in ether" aria-describedby="basic-addon2">
+                            <div class="input-group-append">
+                                <button id="submitNewSplitRequest" class="btn btn-primary btn-outline-primary" type="button">Submit</button>
+                            </div>
+                        </div> 
+                    </div>    
+                </form>
+            </div>
+        </div>
+
+        <script src="http://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+            crossorigin="anonymous"></script>
+        <script type="text/javascript" src="app.js"></script>
+    </body>
+</html>
