@@ -40,13 +40,19 @@ contract Splitter {
         beneficiaries[uint8(BeneficiaryID.Carol)] = Beneficiary(_beneficiary2, 0);
     }
 
+    modifier onlyOwner() {
+        require(msg.sender == benefactor);
+
+        _;
+    }
+
+
     function performSplit()
         public
+        onlyOwner
         payable
     {
         
-        // only accept splut request from benefactor
-        require(msg.sender == benefactor);
         LogNewSplit(msg.sender, msg.value);
 
         // split the amount
@@ -132,5 +138,30 @@ contract Splitter {
         } else {
             return 0;
         }
-    }       
+    }     
+
+    function kill()
+        public 
+        onlyOwner
+    {
+        selfdestruct(msg.sender);
+    }  
 }
+
+contract SplitterCreator {
+
+    event LogNewSplitterCreated(Splitter indexed splitterAddress);
+
+    function createSplitter(
+        address benefactor, 
+        address beneficiary1,
+        address beneficiary2
+    )
+        public
+        returns(Splitter splitterAddress)
+    {
+        splitterAddress = new Splitter(benefactor, beneficiary1, beneficiary2);
+        LogNewSplitterCreated(splitterAddress);
+        return;
+    }
+} 
